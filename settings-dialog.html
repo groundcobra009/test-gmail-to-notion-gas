@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+      input[type="text"], input[type="password"] {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+      .help-text {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+      }
+      .button-group {
+        margin-top: 20px;
+        text-align: right;
+      }
+      button {
+        padding: 8px 16px;
+        margin-left: 10px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .save-btn {
+        background-color: #4CAF50;
+        color: white;
+      }
+      .cancel-btn {
+        background-color: #f44336;
+        color: white;
+      }
+      .loading {
+        display: none;
+        color: #666;
+      }
+      .error {
+        color: #f44336;
+        margin-top: 10px;
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h3>Gmail-Notion連携設定</h3>
+    
+    <div class="form-group">
+      <label for="notionKey">Notion インテグレーションキー:</label>
+      <input type="password" id="notionKey" placeholder="secret_...">
+      <div class="help-text">
+        Notionの設定 > Integrations から作成したInternal Integrationのトークン
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label for="databaseId">Notion データベースID:</label>
+      <input type="text" id="databaseId" placeholder="32文字の英数字">
+      <div class="help-text">
+        データベースのURLから取得: https://notion.so/[ここの32文字]?v=...
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label for="titleProperty">タイトルプロパティ名:</label>
+      <input type="text" id="titleProperty" value="タイトル">
+      <div class="help-text">
+        Notionデータベースのタイトル列の名前（通常は「タイトル」や「Name」）
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label for="gmailLabel">Gmailラベル名:</label>
+      <input type="text" id="gmailLabel" value="Notion">
+      <div class="help-text">
+        処理対象のメールに付けるGmailのラベル名
+      </div>
+    </div>
+    
+    <div class="loading">保存中...</div>
+    <div class="error" id="errorMessage"></div>
+    
+    <div class="button-group">
+      <button class="cancel-btn" onclick="google.script.host.close()">キャンセル</button>
+      <button class="save-btn" onclick="saveSettings()">保存</button>
+    </div>
+    
+    <script>
+      // ページ読み込み時に現在の設定を取得
+      window.onload = function() {
+        google.script.run
+          .withSuccessHandler(function(settings) {
+            document.getElementById('notionKey').value = settings.notionKey || '';
+            document.getElementById('databaseId').value = settings.databaseId || '';
+            document.getElementById('titleProperty').value = settings.titleProperty || 'タイトル';
+            document.getElementById('gmailLabel').value = settings.gmailLabel || 'Notion';
+          })
+          .withFailureHandler(function(error) {
+            console.error('設定の取得に失敗しました:', error);
+          })
+          .getCurrentSettings();
+      };
+      
+      function saveSettings() {
+        // エラーメッセージをクリア
+        document.getElementById('errorMessage').style.display = 'none';
+        
+        // 入力値を取得
+        const settings = {
+          notionKey: document.getElementById('notionKey').value.trim(),
+          databaseId: document.getElementById('databaseId').value.trim(),
+          titleProperty: document.getElementById('titleProperty').value.trim(),
+          gmailLabel: document.getElementById('gmailLabel').value.trim()
+        };
+        
+        // バリデーション
+        if (!settings.notionKey || !settings.databaseId) {
+          showError('インテグレーションキーとデータベースIDは必須です。');
+          return;
+        }
+        
+        // ローディング表示
+        document.querySelector('.loading').style.display = 'block';
+        document.querySelector('.save-btn').disabled = true;
+        
+        // 設定を保存
+        google.script.run
+          .withSuccessHandler(function() {
+            google.script.host.close();
+          })
+          .withFailureHandler(function(error) {
+            document.querySelector('.loading').style.display = 'none';
+            document.querySelector('.save-btn').disabled = false;
+            showError('保存に失敗しました: ' + error.message);
+          })
+          .updateSettings(settings);
+      }
+      
+      function showError(message) {
+        const errorEl = document.getElementById('errorMessage');
+        errorEl.textContent = message;
+        errorEl.style.display = 'block';
+      }
+    </script>
+  </body>
+</html>
