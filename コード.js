@@ -189,6 +189,13 @@ function syncEmailsToNotion() {
         const success = createNotionPage(settings, message);
         
         if (success) {
+          // Notionへの送信が成功したらGmailラベルを削除
+          const thread = message.getThread();
+          const label = GmailApp.getUserLabelByName(settings.gmailLabel);
+          if (label) {
+            thread.removeLabel(label);
+          }
+          
           processedCount++;
           if (messageDate > lastProcessedTime) {
             lastProcessedTime = messageDate;
